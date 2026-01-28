@@ -1,11 +1,8 @@
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { building, dev } from '$app/environment';
+import { createClient } from '@supabase/supabase-js';
+import { env } from '$env/dynamic/private';
 
-// In development, use static/uploads. In production, use build/client/uploads
-const UPLOAD_DIR = dev ? 'static/uploads' : 'build/client/uploads';
 const SIZES = {
 	thumbnail: { width: 150, height: 150 },
 	medium: { width: 600, height: 600 },
@@ -19,95 +16,126 @@ export interface ProcessedImages {
 	thumbnailPath: string;
 }
 
-async function ensureDirectoryExists(dirPath: string): Promise<void> {
-	try {
-		await fs.access(dirPath);
-	} catch {
-		await fs.mkdir(dirPath, { recursive: true });
+function getSupabaseClient() {
+	const supabaseUrl = env.SUPABASE_URL;
+	const supabaseKey = env.SUPABASE_SERVICE_KEY;
+
+	if (!supabaseUrl || !supabaseKey) {
+		throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set');
 	}
+
+	return createClient(supabaseUrl, supabaseKey);
+}
+
+async function uploadToSupabase(
+	buffer: Buffer,
+	filePath: string,
+	contentType: string
+): Promise<string> {
+	const supabase = getSupabaseClient();
+
+	const { data, error } = await supabase.storage
+		.from('uploads')
+		.upload(filePath, buffer, {
+			contentType,
+			upsert: true
+		});
+
+	if (error) {
+		throw new Error(`Supabase upload error: ${error.message}`);
+	}
+
+	// Get public URL
+	const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(filePath);
+
+	return urlData.publicUrl;
 }
 
 export async function processAndSaveImage(file: File): Promise<ProcessedImages> {
 	const fileId = uuidv4();
 	const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-	const baseFilename = `${fileId}`;
-
-	// Ensure upload directories exist
-	await ensureDirectoryExists(path.join(UPLOAD_DIR, 'original'));
-	await ensureDirectoryExists(path.join(UPLOAD_DIR, 'large'));
-	await ensureDirectoryExists(path.join(UPLOAD_DIR, 'medium'));
-	await ensureDirectoryExists(path.join(UPLOAD_DIR, 'thumbnails'));
 
 	// Convert file to buffer
 	const arrayBuffer = await file.arrayBuffer();
 	const buffer = Buffer.from(arrayBuffer);
 
-	// Save original
-	const originalFilename = `${baseFilename}.${extension}`;
-	const originalPath = path.join(UPLOAD_DIR, 'original', originalFilename);
-	await fs.writeFile(originalPath, buffer);
+	// Determine content type
+	const contentType = file.type || 'image/jpeg';
 
-	// Process and save resized versions
-	const sharpInstance = sharp(buffer);
-	const metadata = await sharpInstance.metadata();
+	// Upload original
+	const originalFilename = `original/${fileId}.${extension}`;
+	const originalPath = await uploadToSupabase(buffer, originalFilename, contentType);
 
-	// Large version (1200x1200 max)
-	const largeFilename = `${baseFilename}.webp`;
-	const largePath = path.join(UPLOAD_DIR, 'large', largeFilename);
-	await sharp(buffer)
+	// Process and upload large version (1200x1200 max)
+	const largeBuffer = await sharp(buffer)
 		.resize(SIZES.large.width, SIZES.large.height, {
 			fit: 'inside',
 			withoutEnlargement: true
 		})
 		.webp({ quality: 85 })
-		.toFile(largePath);
+		.toBuffer();
 
-	// Medium version (600x600 max)
-	const mediumFilename = `${baseFilename}.webp`;
-	const mediumPath = path.join(UPLOAD_DIR, 'medium', mediumFilename);
-	await sharp(buffer)
+	const largeFilename = `large/${fileId}.webp`;
+	const largePath = await uploadToSupabase(largeBuffer, largeFilename, 'image/webp');
+
+	// Process and upload medium version (600x600 max)
+	const mediumBuffer = await sharp(buffer)
 		.resize(SIZES.medium.width, SIZES.medium.height, {
 			fit: 'inside',
 			withoutEnlargement: true
 		})
 		.webp({ quality: 80 })
-		.toFile(mediumPath);
+		.toBuffer();
 
-	// Thumbnail (150x150 cover)
-	const thumbnailFilename = `${baseFilename}.webp`;
-	const thumbnailPath = path.join(UPLOAD_DIR, 'thumbnails', thumbnailFilename);
-	await sharp(buffer)
+	const mediumFilename = `medium/${fileId}.webp`;
+	const mediumPath = await uploadToSupabase(mediumBuffer, mediumFilename, 'image/webp');
+
+	// Process and upload thumbnail (150x150 cover)
+	const thumbnailBuffer = await sharp(buffer)
 		.resize(SIZES.thumbnail.width, SIZES.thumbnail.height, {
 			fit: 'cover',
 			position: 'centre'
 		})
 		.webp({ quality: 75 })
-		.toFile(thumbnailPath);
+		.toBuffer();
 
-	// Return web-accessible paths (without 'static' prefix)
+	const thumbnailFilename = `thumbnails/${fileId}.webp`;
+	const thumbnailPath = await uploadToSupabase(thumbnailBuffer, thumbnailFilename, 'image/webp');
+
+	// Return full URLs
 	return {
-		originalPath: `/uploads/original/${originalFilename}`,
-		largePath: `/uploads/large/${largeFilename}`,
-		mediumPath: `/uploads/medium/${mediumFilename}`,
-		thumbnailPath: `/uploads/thumbnails/${thumbnailFilename}`
+		originalPath,
+		largePath,
+		mediumPath,
+		thumbnailPath
 	};
 }
 
 export async function deleteImageFiles(imagePaths: ProcessedImages): Promise<void> {
-	const baseDir = dev ? 'static' : 'build/client';
-	const pathsToDelete = [
-		path.join(baseDir, imagePaths.originalPath),
-		path.join(baseDir, imagePaths.largePath),
-		path.join(baseDir, imagePaths.mediumPath),
-		path.join(baseDir, imagePaths.thumbnailPath)
-	];
+	const supabase = getSupabaseClient();
 
-	for (const filePath of pathsToDelete) {
+	// Extract file paths from URLs
+	const extractPath = (url: string): string | null => {
 		try {
-			await fs.unlink(filePath);
-		} catch (err) {
-			// File might not exist, ignore error
-			console.warn(`Could not delete file ${filePath}:`, err);
+			const urlObj = new URL(url);
+			const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/uploads\/(.+)/);
+			return pathMatch ? pathMatch[1] : null;
+		} catch {
+			return null;
+		}
+	};
+
+	const pathsToDelete = [
+		extractPath(imagePaths.originalPath),
+		extractPath(imagePaths.largePath),
+		extractPath(imagePaths.mediumPath),
+		extractPath(imagePaths.thumbnailPath)
+	].filter((p): p is string => p !== null);
+
+	if (pathsToDelete.length > 0) {
+		const { error } = await supabase.storage.from('uploads').remove(pathsToDelete);
+		if (error) {
+			console.warn('Error deleting files from Supabase:', error.message);
 		}
 	}
 }
@@ -116,14 +144,9 @@ export async function getImageInfo(
 	filePath: string
 ): Promise<{ width: number; height: number; format: string } | null> {
 	try {
-		const baseDir = dev ? 'static' : 'build/client';
-		const fullPath = path.join(baseDir, filePath);
-		const metadata = await sharp(fullPath).metadata();
-		return {
-			width: metadata.width || 0,
-			height: metadata.height || 0,
-			format: metadata.format || 'unknown'
-		};
+		// For Supabase URLs, we can't easily get metadata without downloading
+		// Return null for now - this function is rarely used
+		return null;
 	} catch {
 		return null;
 	}

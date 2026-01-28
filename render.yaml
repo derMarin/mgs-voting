@@ -3,11 +3,7 @@ services:
     name: mgs-voting
     runtime: node
     buildCommand: npm ci && npm run build
-    startCommand: mkdir -p build/client/uploads/original build/client/uploads/large build/client/uploads/medium build/client/uploads/thumbnails && node build
-    disk:
-      name: uploads
-      mountPath: /opt/render/project/src/build/client/uploads
-      sizeGB: 1
+    startCommand: node build
     envVars:
       - key: NODE_VERSION
         value: "20"
