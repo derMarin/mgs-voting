@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: mgs-voting
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: node build
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

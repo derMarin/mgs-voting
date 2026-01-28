@@ -1,0 +1,76 @@
+2026-01-28T18:49:23.243060698Z ==> Deploying...
+2026-01-28T18:49:23.470248316Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-01-28T18:49:42.027582785Z ==> Running 'node build'
+2026-01-28T18:49:42.314973767Z node:internal/modules/cjs/loader:1386
+2026-01-28T18:49:42.314998467Z   throw err;
+2026-01-28T18:49:42.315067849Z   ^
+2026-01-28T18:49:42.315070509Z 
+2026-01-28T18:49:42.315073539Z Error: Cannot find module '/opt/render/project/src/build'
+2026-01-28T18:49:42.315076379Z     at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-01-28T18:49:42.315078499Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-01-28T18:49:42.315080509Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-01-28T18:49:42.315082579Z     at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-01-28T18:49:42.31508458Z     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-01-28T18:49:42.315086749Z     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-01-28T18:49:42.31508966Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+2026-01-28T18:49:42.31509611Z     at node:internal/main/run_main_module:36:49 {
+2026-01-28T18:49:42.31509897Z   code: 'MODULE_NOT_FOUND',
+2026-01-28T18:49:42.31510163Z   requireStack: []
+2026-01-28T18:49:42.31510363Z }
+2026-01-28T18:49:42.31510556Z 
+2026-01-28T18:49:42.31510754Z Node.js v22.22.0
+2026-01-28T18:49:48.97326584Z ==> Exited with status 1
+2026-01-28T18:49:48.975948844Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2026-01-28T18:49:51.988192859Z ==> Running 'node build'
+2026-01-28T18:49:52.188633295Z node:internal/modules/cjs/loader:1386
+2026-01-28T18:49:52.188660535Z   throw err;
+2026-01-28T18:49:52.188664516Z   ^
+2026-01-28T18:49:52.188666725Z 
+2026-01-28T18:49:52.188670076Z Error: Cannot find module '/opt/render/project/src/build'
+2026-01-28T18:49:52.188673246Z     at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-01-28T18:49:52.188675376Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-01-28T18:49:52.188677316Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-01-28T18:49:52.188679366Z     at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-01-28T18:49:52.188681426Z     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-01-28T18:49:52.188683646Z     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-01-28T18:49:52.188686586Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+2026-01-28T18:49:52.188690556Z     at node:internal/main/run_main_module:36:49 {
+2026-01-28T18:49:52.188693336Z   code: 'MODULE_NOT_FOUND',
+2026-01-28T18:49:52.188696026Z   requireStack: []
+2026-01-28T18:49:52.188698056Z }
+2026-01-28T18:49:52.188699826Z 
+2026-01-28T18:49:52.188701806Z Node.js v22.22.0
+2026-01-28T18:58:15.55235132Z ==> Deploying...
+2026-01-28T18:58:15.796694395Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-01-28T18:58:49.021606815Z ==> Running 'node build'
+2026-01-28T18:58:49.226710318Z node:internal/modules/cjs/loader:1210
+2026-01-28T18:58:49.226736329Z   throw err;
+2026-01-28T18:58:49.226740009Z   ^
+2026-01-28T18:58:49.226742439Z 
+2026-01-28T18:58:49.226745779Z Error: Cannot find module '/opt/render/project/src/build'
+2026-01-28T18:58:49.226749269Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+2026-01-28T18:58:49.226751809Z     at Module._load (node:internal/modules/cjs/loader:1038:27)
+2026-01-28T18:58:49.226755689Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+2026-01-28T18:58:49.226759709Z     at node:internal/main/run_main_module:28:49 {
+2026-01-28T18:58:49.226762949Z   code: 'MODULE_NOT_FOUND',
+2026-01-28T18:58:49.2267667Z   requireStack: []
+2026-01-28T18:58:49.22676934Z }
+2026-01-28T18:58:49.2267717Z 
+2026-01-28T18:58:49.22677436Z Node.js v20.20.0
+2026-01-28T18:58:54.749878647Z ==> Exited with status 1
+2026-01-28T18:58:54.752250584Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2026-01-28T18:58:59.38072617Z ==> Running 'node build'
+2026-01-28T18:58:59.58037407Z node:internal/modules/cjs/loader:1210
+2026-01-28T18:58:59.58039294Z   throw err;
+2026-01-28T18:58:59.58039717Z   ^
+2026-01-28T18:58:59.58040042Z 
+2026-01-28T18:58:59.58040435Z Error: Cannot find module '/opt/render/project/src/build'
+2026-01-28T18:58:59.58040816Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+2026-01-28T18:58:59.58041088Z     at Module._load (node:internal/modules/cjs/loader:1038:27)
+2026-01-28T18:58:59.580414541Z     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+2026-01-28T18:58:59.580419081Z     at node:internal/main/run_main_module:28:49 {
+2026-01-28T18:58:59.580422591Z   code: 'MODULE_NOT_FOUND',
+2026-01-28T18:58:59.580426291Z   requireStack: []
+2026-01-28T18:58:59.580429311Z }
+2026-01-28T18:58:59.580432201Z 
+2026-01-28T18:58:59.580435611Z Node.js v20.20.0
