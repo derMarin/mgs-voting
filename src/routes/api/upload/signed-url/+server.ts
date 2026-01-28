@@ -29,15 +29,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const supabase = createClient(supabaseUrl, supabaseKey);
 
 		const fileId = uuidv4();
-		const extension = contentType === 'image/png' ? 'png' :
-		                  contentType === 'image/gif' ? 'gif' :
-		                  contentType === 'image/webp' ? 'webp' : 'jpg';
 
-		// Create signed URLs for all sizes
+		// Create signed URLs for large + thumbnail only (faster uploads)
 		const paths = {
-			original: `original/${fileId}.${extension}`,
 			large: `large/${fileId}.webp`,
-			medium: `medium/${fileId}.webp`,
 			thumbnail: `thumbnails/${fileId}.webp`
 		};
 

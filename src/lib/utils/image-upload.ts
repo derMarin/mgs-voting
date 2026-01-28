@@ -78,32 +78,16 @@ export async function uploadImageToSupabase(file: File): Promise<UploadResult> {
 
 	const { signedUrls, publicUrls } = await response.json();
 
-	// 2. Upload original
-	const originalResponse = await fetch(signedUrls.original, {
-		method: 'PUT',
-		headers: { 'Content-Type': file.type },
-		body: file
-	});
-
-	if (!originalResponse.ok) {
-		throw new Error('Failed to upload original image');
-	}
-
-	// 3. Create and upload resized versions
+	// 2. Create resized versions (only large + thumbnail for speed)
 	const largeBlob = await resizeImage(file, 1200, 1200, 85);
-	const mediumBlob = await resizeImage(file, 600, 600, 80);
 	const thumbnailBlob = await resizeImage(file, 150, 150, 75, true);
 
-	await Promise.all([
+	// 3. Upload both in parallel
+	const [largeResponse, thumbnailResponse] = await Promise.all([
 		fetch(signedUrls.large, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'image/webp' },
 			body: largeBlob
-		}),
-		fetch(signedUrls.medium, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'image/webp' },
-			body: mediumBlob
 		}),
 		fetch(signedUrls.thumbnail, {
 			method: 'PUT',
@@ -112,10 +96,15 @@ export async function uploadImageToSupabase(file: File): Promise<UploadResult> {
 		})
 	]);
 
+	if (!largeResponse.ok || !thumbnailResponse.ok) {
+		throw new Error('Failed to upload images');
+	}
+
+	// Use large as fallback for original and medium
 	return {
-		originalPath: publicUrls.original,
+		originalPath: publicUrls.large,
 		largePath: publicUrls.large,
-		mediumPath: publicUrls.medium,
+		mediumPath: publicUrls.large,
 		thumbnailPath: publicUrls.thumbnail
 	};
 }
