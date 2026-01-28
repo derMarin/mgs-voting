@@ -1,0 +1,119 @@
+@import '@tabler/core/dist/css/tabler.min.css';
+
+/* Custom overrides */
+:root {
+	--tblr-primary: #206bc4;
+}
+
+/* Swiper custom styles */
+.swiper {
+	width: 100%;
+	height: 100%;
+}
+
+.swiper-slide {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+/* TipTap editor styles */
+.tiptap-editor {
+	border: 1px solid var(--tblr-border-color);
+	border-radius: var(--tblr-border-radius);
+	min-height: 200px;
+}
+
+.tiptap-editor .ProseMirror {
+	padding: 1rem;
+	outline: none;
+	min-height: 200px;
+}
+
+.tiptap-editor .ProseMirror:focus {
+	border-color: var(--tblr-primary);
+	box-shadow: 0 0 0 0.25rem rgba(32, 107, 196, 0.25);
+}
+
+/* Vote slider styles */
+.vote-slider {
+	-webkit-appearance: none;
+	width: 100%;
+	height: 8px;
+	border-radius: 4px;
+	background: linear-gradient(to right, #d63939, #f59f00, #2fb344);
+	outline: none;
+}
+
+.vote-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: var(--tblr-primary);
+	cursor: pointer;
+	border: 2px solid white;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.vote-slider::-moz-range-thumb {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: var(--tblr-primary);
+	cursor: pointer;
+	border: 2px solid white;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Waiting screen animation */
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+.waiting-pulse {
+	animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* QR Code display */
+.qr-code-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 1.5rem;
+	background: white;
+	border-radius: var(--tblr-border-radius);
+}
+
+/* Candidate card */
+.candidate-card {
+	transition:
+		transform 0.2s,
+		box-shadow 0.2s;
+}
+
+.candidate-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--tblr-box-shadow-lg);
+}
+
+/* Image gallery */
+.image-gallery-thumbnail {
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.image-gallery-thumbnail:hover {
+	opacity: 0.8;
+}
+
+.image-gallery-thumbnail.active {
+	outline: 2px solid var(--tblr-primary);
+	outline-offset: 2px;
+}
