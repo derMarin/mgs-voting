@@ -2,8 +2,10 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { building, dev } from '$app/environment';
 
-const UPLOAD_DIR = 'static/uploads';
+// In development, use static/uploads. In production, use build/client/uploads
+const UPLOAD_DIR = dev ? 'static/uploads' : 'build/client/uploads';
 const SIZES = {
 	thumbnail: { width: 150, height: 150 },
 	medium: { width: 600, height: 600 },
@@ -92,11 +94,12 @@ export async function processAndSaveImage(file: File): Promise<ProcessedImages> 
 }
 
 export async function deleteImageFiles(imagePaths: ProcessedImages): Promise<void> {
+	const baseDir = dev ? 'static' : 'build/client';
 	const pathsToDelete = [
-		path.join('static', imagePaths.originalPath),
-		path.join('static', imagePaths.largePath),
-		path.join('static', imagePaths.mediumPath),
-		path.join('static', imagePaths.thumbnailPath)
+		path.join(baseDir, imagePaths.originalPath),
+		path.join(baseDir, imagePaths.largePath),
+		path.join(baseDir, imagePaths.mediumPath),
+		path.join(baseDir, imagePaths.thumbnailPath)
 	];
 
 	for (const filePath of pathsToDelete) {
@@ -113,7 +116,8 @@ export async function getImageInfo(
 	filePath: string
 ): Promise<{ width: number; height: number; format: string } | null> {
 	try {
-		const fullPath = path.join('static', filePath);
+		const baseDir = dev ? 'static' : 'build/client';
+		const fullPath = path.join(baseDir, filePath);
 		const metadata = await sharp(fullPath).metadata();
 		return {
 			width: metadata.width || 0,
