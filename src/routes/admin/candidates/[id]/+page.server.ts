@@ -4,7 +4,8 @@ import { getAllCategories } from '$lib/server/services/category.service.js';
 import {
 	getCandidateWithImages,
 	updateCandidate,
-	deleteCandidateImage
+	deleteCandidateImage,
+	addCandidateImage
 } from '$lib/server/services/candidate.service.js';
 import { db } from '$lib/server/db/index.js';
 import { candidates } from '$lib/server/db/schema.js';
@@ -89,6 +90,33 @@ export const actions: Actions = {
 		} catch (err) {
 			console.error('Error deleting image:', err);
 			return fail(500, { error: 'Fehler beim Löschen des Bildes' });
+		}
+	},
+
+	addImage: async ({ request }) => {
+		const formData = await request.formData();
+		const candidateId = formData.get('candidateId')?.toString();
+		const originalPath = formData.get('originalPath')?.toString();
+		const largePath = formData.get('largePath')?.toString();
+		const mediumPath = formData.get('mediumPath')?.toString();
+		const thumbnailPath = formData.get('thumbnailPath')?.toString();
+
+		if (!candidateId || !originalPath || !largePath || !mediumPath || !thumbnailPath) {
+			return fail(400, { error: 'Alle Bild-URLs sind erforderlich' });
+		}
+
+		try {
+			await addCandidateImage(candidateId, {
+				originalPath,
+				largePath,
+				mediumPath,
+				thumbnailPath
+			});
+
+			return { success: true };
+		} catch (err) {
+			console.error('Error adding image:', err);
+			return fail(500, { error: 'Fehler beim Hinzufügen des Bildes' });
 		}
 	}
 };

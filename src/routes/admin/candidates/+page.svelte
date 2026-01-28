@@ -2,7 +2,8 @@
 	import type { PageData, ActionData } from './$types.js';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { IconPlus, IconTrash, IconEdit, IconPhoto, IconUpload, IconX } from '@tabler/icons-svelte';
+	import { IconPlus, IconTrash, IconEdit, IconPhoto, IconUpload, IconX, IconLoader2 } from '@tabler/icons-svelte';
+	import { uploadImageToSupabase } from '$lib/utils/image-upload.js';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -10,6 +11,9 @@
 	let deleteConfirmId = $state<string | null>(null);
 	let imagePreview = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
+	let selectedFile = $state<File | null>(null);
+	let isUploading = $state(false);
+	let uploadError = $state<string | null>(null);
 
 	function handleCategoryFilter(e: Event) {
 		const select = e.target as HTMLSelectElement;
@@ -25,6 +29,8 @@
 		const input = e.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) {
+			selectedFile = file;
+			uploadError = null;
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				imagePreview = e.target?.result as string;
@@ -35,6 +41,8 @@
 
 	function clearImage() {
 		imagePreview = null;
+		selectedFile = null;
+		uploadError = null;
 		if (fileInput) {
 			fileInput.value = '';
 		}
@@ -43,6 +51,9 @@
 	function resetModal() {
 		showCreateModal = false;
 		imagePreview = null;
+		selectedFile = null;
+		uploadError = null;
+		isUploading = false;
 		if (fileInput) {
 			fileInput.value = '';
 		}
@@ -182,15 +193,36 @@
 					<button
 						type="button"
 						class="btn-close"
+						aria-label="Schließen"
 						onclick={resetModal}
+						disabled={isUploading}
 					></button>
 				</div>
 				<form
 					method="POST"
 					action="?/create"
-					enctype="multipart/form-data"
-					use:enhance={() => {
+					use:enhance={async ({ formData, cancel }) => {
+						// If there's a file, upload it first
+						if (selectedFile) {
+							isUploading = true;
+							uploadError = null;
+
+							try {
+								const urls = await uploadImageToSupabase(selectedFile);
+								formData.set('originalPath', urls.originalPath);
+								formData.set('largePath', urls.largePath);
+								formData.set('mediumPath', urls.mediumPath);
+								formData.set('thumbnailPath', urls.thumbnailPath);
+							} catch (err) {
+								uploadError = err instanceof Error ? err.message : 'Upload fehlgeschlagen';
+								isUploading = false;
+								cancel();
+								return;
+							}
+						}
+
 						return async ({ result, update }) => {
+							isUploading = false;
 							if (result.type === 'success') {
 								resetModal();
 							}
@@ -199,6 +231,9 @@
 					}}
 				>
 					<div class="modal-body">
+						{#if uploadError}
+							<div class="alert alert-danger mb-3">{uploadError}</div>
+						{/if}
 						<div class="mb-3">
 							<label class="form-label" for="categoryId">Kategorie *</label>
 							<select
@@ -206,6 +241,7 @@
 								name="categoryId"
 								class="form-select"
 								required
+								disabled={isUploading}
 							>
 								<option value="">Kategorie wählen...</option>
 								{#each data.categories as category}
@@ -227,6 +263,7 @@
 								class="form-control"
 								required
 								placeholder="Kandidatenname"
+								disabled={isUploading}
 							/>
 						</div>
 						<div class="mb-3">
@@ -234,25 +271,31 @@
 							{#if imagePreview}
 								<div class="image-preview-container mb-2">
 									<img src={imagePreview} alt="Vorschau" class="image-preview" />
-									<button
-										type="button"
-										class="btn btn-sm btn-outline-danger image-preview-remove"
-										onclick={clearImage}
-									>
-										<IconX size={16} />
-									</button>
+									{#if !isUploading}
+										<button
+											type="button"
+											class="btn btn-sm btn-outline-danger image-preview-remove"
+											onclick={clearImage}
+										>
+											<IconX size={16} />
+										</button>
+									{/if}
 								</div>
 							{:else}
-								<div class="upload-dropzone" onclick={() => fileInput?.click()}>
+								<button
+									type="button"
+									class="upload-dropzone w-100"
+									onclick={() => fileInput?.click()}
+									disabled={isUploading}
+								>
 									<IconUpload size={32} class="text-muted mb-2" />
-									<div class="text-muted">Klicken zum Auswählen oder Bild hierher ziehen</div>
+									<div class="text-muted">Klicken zum Auswählen</div>
 									<small class="text-muted">JPEG, PNG, WebP, GIF (max. 10MB)</small>
-								</div>
+								</button>
 							{/if}
 							<input
 								type="file"
 								id="image"
-								name="image"
 								accept="image/jpeg,image/png,image/webp,image/gif"
 								class="d-none"
 								onchange={handleImageSelect}
@@ -267,6 +310,7 @@
 								class="form-control"
 								rows="5"
 								placeholder="Optionale Beschreibung (HTML erlaubt)"
+								disabled={isUploading}
 							></textarea>
 							<small class="text-muted">
 								Für erweiterte Formatierung bearbeiten Sie den Kandidaten nach dem Erstellen.
@@ -281,6 +325,7 @@
 								class="form-control"
 								value="0"
 								min="0"
+								disabled={isUploading}
 							/>
 						</div>
 					</div>
@@ -289,10 +334,18 @@
 							type="button"
 							class="btn btn-ghost-secondary"
 							onclick={resetModal}
+							disabled={isUploading}
 						>
 							Abbrechen
 						</button>
-						<button type="submit" class="btn btn-primary">Erstellen</button>
+						<button type="submit" class="btn btn-primary" disabled={isUploading}>
+							{#if isUploading}
+								<IconLoader2 size={16} class="me-1 spinner" />
+								Wird hochgeladen...
+							{:else}
+								Erstellen
+							{/if}
+						</button>
 					</div>
 				</form>
 			</div>
@@ -353,17 +406,26 @@
 
 <style>
 	.upload-dropzone {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
 		border: 2px dashed var(--tblr-border-color);
 		border-radius: var(--tblr-border-radius);
 		padding: 2rem;
 		text-align: center;
 		cursor: pointer;
+		background: transparent;
 		transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 	}
 
-	.upload-dropzone:hover {
+	.upload-dropzone:hover:not(:disabled) {
 		border-color: var(--tblr-primary);
 		background-color: var(--tblr-bg-surface-secondary);
+	}
+
+	.upload-dropzone:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.image-preview-container {
@@ -382,5 +444,18 @@
 		position: absolute;
 		top: 0.5rem;
 		right: 0.5rem;
+	}
+
+	.spinner {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

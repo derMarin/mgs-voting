@@ -1,7 +1,9 @@
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/private';
+
+let supabaseClient: SupabaseClient | null = null;
 
 const SIZES = {
 	thumbnail: { width: 150, height: 150 },
@@ -16,7 +18,11 @@ export interface ProcessedImages {
 	thumbnailPath: string;
 }
 
-function getSupabaseClient() {
+async function getSupabaseClient(): Promise<SupabaseClient> {
+	if (supabaseClient) {
+		return supabaseClient;
+	}
+
 	const supabaseUrl = env.SUPABASE_URL;
 	const supabaseKey = env.SUPABASE_SERVICE_KEY;
 
@@ -24,7 +30,11 @@ function getSupabaseClient() {
 		throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set');
 	}
 
-	return createClient(supabaseUrl, supabaseKey);
+	// Lazy import to avoid slow startup
+	const { createClient } = await import('@supabase/supabase-js');
+	supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+	return supabaseClient;
 }
 
 async function uploadToSupabase(
@@ -32,7 +42,7 @@ async function uploadToSupabase(
 	filePath: string,
 	contentType: string
 ): Promise<string> {
-	const supabase = getSupabaseClient();
+	const supabase = await getSupabaseClient();
 
 	const { data, error } = await supabase.storage
 		.from('uploads')
@@ -112,7 +122,7 @@ export async function processAndSaveImage(file: File): Promise<ProcessedImages> 
 }
 
 export async function deleteImageFiles(imagePaths: ProcessedImages): Promise<void> {
-	const supabase = getSupabaseClient();
+	const supabase = await getSupabaseClient();
 
 	// Extract file paths from URLs
 	const extractPath = (url: string): string | null => {

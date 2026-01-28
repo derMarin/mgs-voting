@@ -1,12 +1,53 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types.js';
 	import { enhance } from '$app/forms';
-	import { IconArrowLeft, IconTrash, IconUpload } from '@tabler/icons-svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { IconArrowLeft, IconTrash, IconUpload, IconLoader2 } from '@tabler/icons-svelte';
+	import { uploadImageToSupabase } from '$lib/utils/image-upload.js';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let loading = $state(false);
 	let deleteImageId = $state<string | null>(null);
+	let isUploading = $state(false);
+	let uploadError = $state<string | null>(null);
+	let fileInput = $state<HTMLInputElement | null>(null);
+
+	async function handleImageUpload() {
+		const file = fileInput?.files?.[0];
+		if (!file) return;
+
+		isUploading = true;
+		uploadError = null;
+
+		try {
+			const urls = await uploadImageToSupabase(file);
+
+			// Submit to server to save in database
+			const formData = new FormData();
+			formData.set('candidateId', data.candidate.id);
+			formData.set('originalPath', urls.originalPath);
+			formData.set('largePath', urls.largePath);
+			formData.set('mediumPath', urls.mediumPath);
+			formData.set('thumbnailPath', urls.thumbnailPath);
+
+			const response = await fetch('?/addImage', {
+				method: 'POST',
+				body: formData
+			});
+
+			if (response.ok) {
+				if (fileInput) fileInput.value = '';
+				await invalidateAll();
+			} else {
+				uploadError = 'Fehler beim Speichern des Bildes';
+			}
+		} catch (err) {
+			uploadError = err instanceof Error ? err.message : 'Upload fehlgeschlagen';
+		} finally {
+			isUploading = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -134,26 +175,34 @@
 						<h3 class="card-title">Bilder</h3>
 					</div>
 					<div class="card-body">
-						<form
-							action="/api/images/upload"
-							method="POST"
-							enctype="multipart/form-data"
-							class="mb-3"
-						>
-							<input type="hidden" name="candidateId" value={data.candidate.id} />
+						{#if uploadError}
+							<div class="alert alert-danger mb-3">{uploadError}</div>
+						{/if}
+						<div class="mb-3">
 							<div class="mb-2">
 								<input
 									type="file"
-									name="image"
-									accept="image/*"
+									accept="image/jpeg,image/png,image/webp,image/gif"
 									class="form-control"
+									bind:this={fileInput}
+									disabled={isUploading}
 								/>
 							</div>
-							<button type="submit" class="btn btn-outline-primary btn-sm">
-								<IconUpload size={16} class="me-1" />
-								Bild hochladen
+							<button
+								type="button"
+								class="btn btn-outline-primary btn-sm"
+								onclick={handleImageUpload}
+								disabled={isUploading}
+							>
+								{#if isUploading}
+									<IconLoader2 size={16} class="me-1 spinner" />
+									Wird hochgeladen...
+								{:else}
+									<IconUpload size={16} class="me-1" />
+									Bild hochladen
+								{/if}
 							</button>
-						</form>
+						</div>
 
 						{#if data.candidate.images.length > 0}
 							<div class="row g-2">
@@ -248,3 +297,18 @@
 	</div>
 	<div class="modal-backdrop fade show"></div>
 {/if}
+
+<style>
+	.spinner {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+</style>

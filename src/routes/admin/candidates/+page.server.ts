@@ -7,7 +7,6 @@ import {
 	deleteCandidate,
 	addCandidateImage
 } from '$lib/server/services/candidate.service.js';
-import { processAndSaveImage } from '$lib/server/services/image.service.js';
 import { db } from '$lib/server/db/index.js';
 import { candidates, candidateImages } from '$lib/server/db/schema.js';
 import { asc } from 'drizzle-orm';
@@ -46,7 +45,12 @@ export const actions: Actions = {
 		const name = formData.get('name')?.toString();
 		const description = formData.get('description')?.toString();
 		const sortOrder = parseInt(formData.get('sortOrder')?.toString() || '0', 10);
-		const imageFile = formData.get('image') as File | null;
+
+		// Image URLs from client-side upload
+		const originalPath = formData.get('originalPath')?.toString();
+		const largePath = formData.get('largePath')?.toString();
+		const mediumPath = formData.get('mediumPath')?.toString();
+		const thumbnailPath = formData.get('thumbnailPath')?.toString();
 
 		if (!categoryId) {
 			return fail(400, { error: 'Kategorie ist erforderlich' });
@@ -64,22 +68,14 @@ export const actions: Actions = {
 				sortOrder
 			});
 
-			// Process and save image if provided
-			if (imageFile && imageFile.size > 0) {
-				// Validate file type
-				const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-				if (!allowedTypes.includes(imageFile.type)) {
-					return fail(400, { error: 'Ungültiger Dateityp. Erlaubt: JPEG, PNG, WebP, GIF' });
-				}
-
-				// Validate file size (max 10MB)
-				const maxSize = 10 * 1024 * 1024;
-				if (imageFile.size > maxSize) {
-					return fail(400, { error: 'Datei zu groß. Maximum: 10MB' });
-				}
-
-				const imagePaths = await processAndSaveImage(imageFile);
-				await addCandidateImage(candidate.id, imagePaths);
+			// Save image URLs if provided (uploaded directly to Supabase from client)
+			if (originalPath && largePath && mediumPath && thumbnailPath) {
+				await addCandidateImage(candidate.id, {
+					originalPath,
+					largePath,
+					mediumPath,
+					thumbnailPath
+				});
 			}
 
 			return { success: true };
